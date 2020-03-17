@@ -44,7 +44,7 @@ parser.add_argument('--batch-size', type=int, default=100,
 parser.add_argument('--epochs', type=int, default=10,
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--optimizer', type=str,
-                    default='sgd', help='sgd|LookaheadSGD')
+                    default='sgd', help='sgd|LookaheadSGD|adam|LookaheadAdam')
 parser.add_argument('--lr', type=float, default=0.1,
                     help='learning rate (default: 0.1)')
 parser.add_argument('--momentum', type=float, default=0.9,
@@ -100,9 +100,12 @@ def test(ctx):
 def train(epochs, ctx):
     # Collect all parameters from net and its children, then initialize them.
     net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+    # Optimizer params
+    optimizer_params = {'learning_rate': opt.lr}
+    if 'sgd' in opt.optimizer.lower():
+        optimizer_params['momentum'] = opt.momentum
     # Trainer is for updating parameters with gradient.
-    trainer = gluon.Trainer(net.collect_params(), opt.optimizer,
-                            {'learning_rate': opt.lr, 'momentum': opt.momentum})
+    trainer = gluon.Trainer(net.collect_params(), opt.optimizer, optimizer_params)
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 

@@ -27,14 +27,22 @@ def _register_lookahead_opt():
             index, weight, grad, state, self._parent_cls.update_multi_precision)
 
     def _lookahead_update_impl(self, indexes, weights, grads, states, update_func):
-        if not isinstance(indexes, (list, tuple)):
+        # Fast step
+        if isinstance(indexes, (list, tuple)):
+            # multi index case: SGD optimizer
+            for index, weight in zip(indexes, weights):
+                if index not in self._lookahead_params:
+                    self._lookahead_params[index] = weight.copy()
+            update_func(indexes, weights, grads, states)
+        else:
+            # single index case: all other optimizers
+            if indexes not in self._lookahead_params:
+                self._lookahead_params[indexes] = weights.copy()
+            update_func(indexes, weights, grads, states)
             indexes = [indexes]
             weights = [weights]
             grads = [grads]
-        for index, weight in zip(indexes, weights):
-            if index not in self._lookahead_params:
-                self._lookahead_params[index] = weight.copy()
-        update_func(indexes, weights, grads, states)
+        # Slow step
         for index, weight, grad in zip(indexes, weights, grads):
             count = self._index_update_count[index]
             if count % self.k == 0:
